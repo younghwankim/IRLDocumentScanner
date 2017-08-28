@@ -27,7 +27,7 @@ s.dependency 'TOCropViewController', '~> 2.0'
 s.subspec 'Default' do |d|
 	d.source_files          = 'Source', 'Source/**/*.{h,m}'
 
-	d.resources    = [ '*.storyboard', '*.xcassets' ]
+	d.resources    = [ 'Source/*.storyboard', 'Source/*.xcassets' ]
 
 	d.ios.frameworks = 'Foundation', 'UIKit', 'AVFoundation', 'CoreImage',  'GLKit'
 
