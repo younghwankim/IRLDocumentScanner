@@ -10,6 +10,18 @@
 #import "CIImage+Utilities.h"
 #import <ImageIO/ImageIO.h>
 
+@interface IPDFRectangleFeature : NSObject
+
+@property (nonatomic) CGPoint topLeft;
+@property (nonatomic) CGPoint topRight;
+@property (nonatomic) CGPoint bottomRight;
+@property (nonatomic) CGPoint bottomLeft;
+
+@end
+
+@implementation IPDFRectangleFeature
+@end
+
 @interface IRLCameraView () <AVCaptureVideoDataOutputSampleBufferDelegate> {
     
     CIContext*              _coreImageContext;
@@ -23,7 +35,7 @@
     BOOL                    _borderDetectFrame;
     CIRectangleFeature*     _borderDetectLastRectangleFeature;
     BOOL                    _FocusCurrentRectangleDone;
-
+    dispatch_queue_t _captureQueue;
 }
 
 @property (readwrite)               BOOL                            didNotifyFullConfidence;
@@ -119,6 +131,8 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_backgroundMode) name:UIApplicationWillResignActiveNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_foregroundMode) name:UIApplicationDidBecomeActiveNotification object:nil];
+    
+    _captureQueue = dispatch_queue_create("com.descloud.AVCameraCaptureQueue", DISPATCH_QUEUE_SERIAL);
 }
 
 - (void)_backgroundMode {
@@ -241,8 +255,7 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
     [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
     [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey:@(kCVPixelFormatType_32BGRA)}];
     
-    dispatch_queue_t queue = dispatch_queue_create("ScanSampleBufferQueue", NULL);
-    [dataOutput setSampleBufferDelegate:self queue:queue];
+    [dataOutput setSampleBufferDelegate:self queue:_captureQueue];
     [session addOutput:dataOutput];
     
     // Preview Layer
@@ -260,15 +273,14 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
     // Configure the Device
     NSError *configError;
     if ([device lockForConfiguration:&configError]) {
-        
         if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
             [device setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
         }
-        //if ([device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]){
-		//[device setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
-		//}
+//        if ([device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]){
+//            [device setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+//		}
         if (device.isFlashAvailable) {
-            [device setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
+            [device setFocusMode:AVCaptureFocusModeAutoFocus];
         }
         
         if (configError) {
@@ -321,7 +333,7 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
         if ([device lockForConfiguration:&error])
         {
 			[device setFocusPointOfInterest:pointOfInterest];
-
+            
             if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus])
             {
                 [device setFocusMode:AVCaptureFocusModeContinuousAutoFocus];
@@ -331,12 +343,12 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
 			{
 				[device setExposurePointOfInterest:pointOfInterest];
 			}
-            /*
-            if([device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure])
-            {
-                [device setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
-            }
-            */
+            
+//            if([device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure])
+//            {
+//                [device setExposureMode:AVCaptureExposureModeContinuousAutoExposure];
+//            }
+            
             [device unlockForConfiguration];
 
 			if(completionHandler) completionHandler();
@@ -351,10 +363,19 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
 
 - (void)focusAtPoint:(CGPoint)point completionHandler:(void(^)())completionHandler {
     
-    CGPoint pointOfInterest = CGPointZero;
-    CGSize frameSize        = self.bounds.size;
-    pointOfInterest = CGPointMake(point.y / frameSize.height, 1.f - (point.x / frameSize.width));
-    [self focusWithPoinOfInterest:pointOfInterest completionHandler:completionHandler];
+    if([NSThread isMainThread]) {
+        CGPoint pointOfInterest = CGPointZero;
+        CGSize frameSize        = self.bounds.size;
+        pointOfInterest = CGPointMake(point.y / frameSize.height, 1.f - (point.x / frameSize.width));
+        [self focusWithPoinOfInterest:pointOfInterest completionHandler:completionHandler];
+    } else {
+        dispatch_async(dispatch_get_main_queue(), ^ {
+            CGPoint pointOfInterest = CGPointZero;
+            CGSize frameSize        = self.bounds.size;
+            pointOfInterest = CGPointMake(point.y / frameSize.height, 1.f - (point.x / frameSize.width));
+            [self focusWithPoinOfInterest:pointOfInterest completionHandler:completionHandler];
+        });
+    }
 }
 
 - (void)captureImageWithCompletionHander:(void(^)(UIImage* image))completionHandler {
@@ -364,6 +385,8 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
     __weak typeof(self) weakSelf = self;
     
     self.isCapturing = YES;
+    
+    dispatch_suspend(_captureQueue);
     
     AVCaptureConnection *videoConnection = nil;
     for (AVCaptureConnection *connection in self.stillImageOutput.connections) {
@@ -379,62 +402,67 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
     }
     
     [self.stillImageOutput captureStillImageAsynchronouslyFromConnection:videoConnection completionHandler: ^(CMSampleBufferRef imageSampleBuffer, NSError *error) {
+        
+        if (error) {
+            dispatch_resume(_captureQueue);
+            return;
+        }
+        
         NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageSampleBuffer];
         UIImage *finalImage;
+     
+        // The original code worked great in iOS 9.  iOS10 created all sorts of problems which were fixed, but iOS 9 can't seem to use them.
+        BOOL isiOS10OrLater = [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){.majorVersion = 10, .minorVersion = 0, .patchVersion = 0}];
         
-        if (weakSelf.isBorderDetectionEnabled) {
-            // The original code worked great in iOS 9.  iOS10 created all sorts of problems which were fixed, but iOS 9 can't seem to use them.
-            BOOL isiOS10OrLater = [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){.majorVersion = 10, .minorVersion = 0, .patchVersion = 0}];
+        CIImage *enhancedImage = [[CIImage alloc] initWithData:imageData];
+        
+        if (isiOS10OrLater) {
+            // match the orientation of the image to the device
+            enhancedImage = [enhancedImage imageByApplyingOrientation:imagePropertyOrientationForUIImageOrientation(imageOrientationForCurrentDeviceOrientation())];
+        }
+        
+        // perform any filters
+        switch (self.cameraViewType) {
+            case IRLScannerViewTypeBlackAndWhite:
+                enhancedImage = [enhancedImage filteredImageUsingEnhanceFilter];
+                break;
+            case IRLScannerViewTypeNormal:
+                enhancedImage = [enhancedImage filteredImageUsingContrastFilter];
+                break;
+            case IRLScannerViewTypeUltraContrast:
+                enhancedImage = [enhancedImage filteredImageUsingUltraContrastWithGradient:weakSelf.gradient];
+                break;
+            default:
+                break;
+        }
+        
+        // crop and correct perspective
+        if (weakSelf.isBorderDetectionEnabled && rectangleDetectionConfidenceHighEnough(_imageDedectionConfidence)) {
+             CIRectangleFeature *rectangleFeature = [CIRectangleFeature biggestRectangleInRectangles:[[weakSelf detector] featuresInImage:enhancedImage]];
             
-            CIImage *enhancedImage = [[CIImage alloc] initWithData:imageData];
-            
-            if (isiOS10OrLater) {
-                // match the orientation of the image to the device
-                enhancedImage = [enhancedImage imageByApplyingOrientation:imagePropertyOrientationForUIImageOrientation(imageOrientationForCurrentDeviceOrientation())];
-            }
-            
-            // perform any filters
-            switch (self.cameraViewType) {
-                case IRLScannerViewTypeBlackAndWhite:
-                    enhancedImage = [enhancedImage filteredImageUsingEnhanceFilter];
-                    break;
-                case IRLScannerViewTypeNormal:
-                    enhancedImage = [enhancedImage filteredImageUsingContrastFilter];
-                    break;
-                case IRLScannerViewTypeUltraContrast:
-                    enhancedImage = [enhancedImage filteredImageUsingUltraContrastWithGradient:weakSelf.gradient];
-                    break;
-                default:
-                    break;
-            }
-            
-            // crop and correct perspective
-            if (rectangleDetectionConfidenceHighEnough(_imageDedectionConfidence)) {
-                 CIRectangleFeature *rectangleFeature = [CIRectangleFeature biggestRectangleInRectangles:[[weakSelf detector] featuresInImage:enhancedImage]];
-                 
-                 if (rectangleFeature) {
-                     enhancedImage = [enhancedImage correctPerspectiveWithFeatures:rectangleFeature];
-                 }
-            }
-            
+             if (rectangleFeature) {
+                 enhancedImage = [enhancedImage correctPerspectiveWithFeatures:rectangleFeature];
+             }
+        }
+        if (weakSelf.isBorderDetectionEnabled){
             enhancedImage = [enhancedImage cropBordersWithMargin:40.0f];
-
-            if (isiOS10OrLater) {
-                finalImage = makeUIImageFromCIImage(enhancedImage);
-            }
-            else {
-                finalImage = [enhancedImage orientationCorrecterUIImage];
-            }
+        }
+        
+        if (isiOS10OrLater) {
+            finalImage = makeUIImageFromCIImage(enhancedImage);
         }
         else {
-            finalImage = [[UIImage alloc] initWithData:imageData];
+            finalImage = [enhancedImage orientationCorrecterUIImage];
         }
-        
+   
         [weakSelf hideGLKView:NO completion:nil];
         
-        if (completionHandler) completionHandler(finalImage);
-        
+        dispatch_async(dispatch_get_main_queue(), ^ {
+            if (completionHandler) completionHandler(finalImage);
+            dispatch_resume(_captureQueue);
+        });
         [self stop];
+        _imageDedectionConfidence = 0.0;
     }];
 }
 
@@ -579,97 +607,218 @@ CGImagePropertyOrientation imagePropertyOrientationForUIImageOrientation(UIImage
             break;
     }
     
-    if (self.isBorderDetectionEnabled) {
-        
-        // Get The current Confidence
-        NSUInteger confidence   =  _imageDedectionConfidence;
-        confidence = confidence > 100 ? 100 : confidence;
-        
-        // Fix the last rectangle detected
-        if (_borderDetectFrame && confidence < self.minimumConfidenceForFullDetection) {
-            _borderDetectLastRectangleFeature = [CIRectangleFeature biggestRectangleInRectangles:[[self detector] featuresInImage:image]];
+    if (self.isBorderDetectionEnabled)
+    {
+        if (_borderDetectFrame)
+        {
+            _borderDetectLastRectangleFeature = [self biggestRectangleInRectangles:[[self highAccuracyRectangleDetector] featuresInImage:image]];
             _borderDetectFrame = NO;
         }
         
-        // Create teh Overlay
-        if (_borderDetectLastRectangleFeature) {
+        if (_borderDetectLastRectangleFeature)
+        {
+            _imageDedectionConfidence += .5;
             
-            // Notify Our Delegate eventually
-            if ([self.delegate respondsToSelector:@selector(didDetectRectangle:withConfidence:)]) {
-                
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [weakSelf.delegate didDetectRectangle:weakSelf withConfidence:confidence];
-                });
-                
-                if (confidence > 98 && [self.delegate respondsToSelector:@selector(didGainFullDetectionConfidence:)] && self.didNotifyFullConfidence == NO) {
-                    
-                    self.didNotifyFullConfidence = YES;
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [weakSelf.delegate didGainFullDetectionConfidence:weakSelf];
-                    });
-                    
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0f *NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                        weakSelf.didNotifyFullConfidence = NO;
-                    });
-                }
-            }
-            
-            _imageDedectionConfidence += 1.0f;
-            
-            CGFloat alpha    = 0.1f;
-            if (_imageDedectionConfidence > 0.0f) {
-                alpha = _imageDedectionConfidence / 100.0f;
-                alpha = alpha > 0.8f ? 0.8f : alpha;
-            }
-            
-            // Keep Ref to the latest corrected Image:
-            self.latestCorrectedImage = [image correctPerspectiveWithFeatures:_borderDetectLastRectangleFeature];
-            
-            // Draw OverLay
-            image = [image drawHighlightOverlayWithcolor:[self.overlayColor colorWithAlphaComponent:alpha] CIRectangleFeature:_borderDetectLastRectangleFeature];
-            
-            // Draw Center
-            if(self.enableDrawCenter) image = [image drawCenterOverlayWithColor:[UIColor redColor] point:_borderDetectLastRectangleFeature.centroid];
-            
-            // Draw Overlay Focus
-            CGFloat amplitude = _borderDetectLastRectangleFeature.bounds.size.width / 4.0f;
-            if(self.isCurrentlyFocusing && self.enableShowAutoFocus) image = [image drawFocusOverlayWithColor:[UIColor colorWithWhite:1.0f alpha:0.7f-alpha] point:_borderDetectLastRectangleFeature.centroid amplitude:amplitude*alpha];
-            
-            // Focus Image on center
-            if (confidence > 50.0f && _FocusCurrentRectangleDone == NO)  {
-                _FocusCurrentRectangleDone = YES;
-                self.isCurrentlyFocusing = YES;
-                
-                [self focusAtPoint:_borderDetectLastRectangleFeature.centroid completionHandler:^{
-                    if (self.enableShowAutoFocus) {
-                        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0f *NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                            self.isCurrentlyFocusing = NO;
-                        });
-                    }
-                }];
-            }
+            image = [self drawHighlightOverlayForPoints:image topLeft:_borderDetectLastRectangleFeature.topLeft topRight:_borderDetectLastRectangleFeature.topRight bottomLeft:_borderDetectLastRectangleFeature.bottomLeft bottomRight:_borderDetectLastRectangleFeature.bottomRight];
         }
-        else {
-            if ([self.delegate respondsToSelector:@selector(didLostConfidence:)]) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [weakSelf.delegate didLostConfidence:self];
-                });
-            }
+        else
+        {
             _imageDedectionConfidence = 0.0f;
-            _FocusCurrentRectangleDone = NO;
-            self.isCurrentlyFocusing = NO;
         }
-        
     }
+
+//    if (self.isBorderDetectionEnabled) {
+//        
+//        // Get The current Confidence
+//        NSUInteger confidence   =  _imageDedectionConfidence;
+//        confidence = confidence > 100 ? 100 : confidence;
+//        
+//        // Fix the last rectangle detected
+//        if (_borderDetectFrame && confidence < self.minimumConfidenceForFullDetection) {
+//            _borderDetectLastRectangleFeature = [CIRectangleFeature biggestRectangleInRectangles:[[self detector] featuresInImage:image]];
+//            _borderDetectFrame = NO;
+//        }
+//        
+//        // Create teh Overlay
+//        if (_borderDetectLastRectangleFeature) {
+//            
+//            // Notify Our Delegate eventually
+//            if ([self.delegate respondsToSelector:@selector(didDetectRectangle:withConfidence:)]) {
+//                
+//                dispatch_async(dispatch_get_main_queue(), ^{
+//                    [weakSelf.delegate didDetectRectangle:weakSelf withConfidence:confidence];
+//                });
+//                
+//                if (confidence > 98 && [self.delegate respondsToSelector:@selector(didGainFullDetectionConfidence:)] && self.didNotifyFullConfidence == NO) {
+//                    
+//                    self.didNotifyFullConfidence = YES;
+//                    dispatch_async(dispatch_get_main_queue(), ^{
+//                        [weakSelf.delegate didGainFullDetectionConfidence:weakSelf];
+//                    });
+//                    
+//                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0f *NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+//                        weakSelf.didNotifyFullConfidence = NO;
+//                    });
+//                }
+//            }
+//            
+//            _imageDedectionConfidence += 1.0f;
+//            
+//            CGFloat alpha    = 0.1f;
+//            if (_imageDedectionConfidence > 0.0f) {
+//                alpha = _imageDedectionConfidence / 100.0f;
+//                alpha = alpha > 0.8f ? 0.8f : alpha;
+//            }
+//            
+//            // Keep Ref to the latest corrected Image:
+//            self.latestCorrectedImage = [image correctPerspectiveWithFeatures:_borderDetectLastRectangleFeature];
+//            
+//            // Draw OverLay
+//            image = [image drawHighlightOverlayWithcolor:[self.overlayColor colorWithAlphaComponent:alpha] CIRectangleFeature:_borderDetectLastRectangleFeature];
+//            
+//            // Draw Center
+//            if(self.enableDrawCenter) image = [image drawCenterOverlayWithColor:[UIColor redColor] point:_borderDetectLastRectangleFeature.centroid];
+//            
+//            // Draw Overlay Focus
+//            CGFloat amplitude = _borderDetectLastRectangleFeature.bounds.size.width / 4.0f;
+//            if(self.isCurrentlyFocusing && self.enableShowAutoFocus) image = [image drawFocusOverlayWithColor:[UIColor colorWithWhite:1.0f alpha:0.7f-alpha] point:_borderDetectLastRectangleFeature.centroid amplitude:amplitude*alpha];
+//            
+//            // Focus Image on center
+//            if (confidence > 50.0f && _FocusCurrentRectangleDone == NO)  {
+//                _FocusCurrentRectangleDone = YES;
+//                self.isCurrentlyFocusing = YES;
+//                
+//                [self focusAtPoint:_borderDetectLastRectangleFeature.centroid completionHandler:^{
+//                    if (self.enableShowAutoFocus) {
+//                        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0f *NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+//                            self.isCurrentlyFocusing = NO;
+//                        });
+//                    }
+//                }];
+//            }
+//        }
+//        else {
+//            if ([self.delegate respondsToSelector:@selector(didLostConfidence:)]) {
+//                dispatch_async(dispatch_get_main_queue(), ^{
+//                    [weakSelf.delegate didLostConfidence:self];
+//                });
+//            }
+//            _imageDedectionConfidence = 0.0f;
+//            _FocusCurrentRectangleDone = NO;
+//            self.isCurrentlyFocusing = NO;
+//        }
+//        
+//    }
     
     // Send the Resulting Image to the Sample Buffer
     if (self.context && _coreImageContext && _glkView != nil)
     {
         __weak CIContext *weakCoreImageContext = _coreImageContext;
-        [weakCoreImageContext drawImage:image inRect:weakSelf.bounds fromRect:image.extent];
-        [weakSelf.context presentRenderbuffer:GL_RENDERBUFFER];
-        [_glkView setNeedsDisplay];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [weakCoreImageContext drawImage:image inRect:weakSelf.bounds fromRect:image.extent];
+            [weakSelf.context presentRenderbuffer:GL_RENDERBUFFER];
+            [_glkView setNeedsDisplay];
+        });
     }
+}
+
+- (CIImage *)drawHighlightOverlayForPoints:(CIImage *)image topLeft:(CGPoint)topLeft topRight:(CGPoint)topRight bottomLeft:(CGPoint)bottomLeft bottomRight:(CGPoint)bottomRight
+{
+    CIImage *overlay = [CIImage imageWithColor:[CIColor colorWithRed:1 green:0 blue:0 alpha:0.6]];
+    overlay = [overlay imageByCroppingToRect:image.extent];
+    overlay = [overlay imageByApplyingFilter:@"CIPerspectiveTransformWithExtent" withInputParameters:@{@"inputExtent":[CIVector vectorWithCGRect:image.extent],@"inputTopLeft":[CIVector vectorWithCGPoint:topLeft],@"inputTopRight":[CIVector vectorWithCGPoint:topRight],@"inputBottomLeft":[CIVector vectorWithCGPoint:bottomLeft],@"inputBottomRight":[CIVector vectorWithCGPoint:bottomRight]}];
+    
+    return [overlay imageByCompositingOverImage:image];
+}
+
+- (CIDetector *)highAccuracyRectangleDetector
+{
+    static CIDetector *detector = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+                  {
+                      detector = [CIDetector detectorOfType:CIDetectorTypeRectangle context:nil options:@{CIDetectorAccuracy : CIDetectorAccuracyHigh}];
+                  });
+    return detector;
+}
+
+- (CIRectangleFeature *)_biggestRectangleInRectangles:(NSArray *)rectangles
+{
+    if (![rectangles count]) return nil;
+    
+    float halfPerimiterValue = 0;
+    
+    CIRectangleFeature *biggestRectangle = [rectangles firstObject];
+    
+    for (CIRectangleFeature *rect in rectangles)
+    {
+        CGPoint p1 = rect.topLeft;
+        CGPoint p2 = rect.topRight;
+        CGFloat width = hypotf(p1.x - p2.x, p1.y - p2.y);
+        
+        CGPoint p3 = rect.topLeft;
+        CGPoint p4 = rect.bottomLeft;
+        CGFloat height = hypotf(p3.x - p4.x, p3.y - p4.y);
+        
+        CGFloat currentHalfPerimiterValue = height + width;
+        
+        if (halfPerimiterValue < currentHalfPerimiterValue)
+        {
+            halfPerimiterValue = currentHalfPerimiterValue;
+            biggestRectangle = rect;
+        }
+    }
+    
+    return biggestRectangle;
+}
+
+- (CIRectangleFeature *)biggestRectangleInRectangles:(NSArray *)rectangles
+{
+    CIRectangleFeature *rectangleFeature = [self _biggestRectangleInRectangles:rectangles];
+    
+    if (!rectangleFeature) return nil;
+    
+    // Credit: http://stackoverflow.com/a/20399468/1091044
+    
+    NSArray *points = @[[NSValue valueWithCGPoint:rectangleFeature.topLeft],[NSValue valueWithCGPoint:rectangleFeature.topRight],[NSValue valueWithCGPoint:rectangleFeature.bottomLeft],[NSValue valueWithCGPoint:rectangleFeature.bottomRight]];
+    
+    CGPoint min = [points[0] CGPointValue];
+    CGPoint max = min;
+    for (NSValue *value in points)
+    {
+        CGPoint point = [value CGPointValue];
+        min.x = fminf(point.x, min.x);
+        min.y = fminf(point.y, min.y);
+        max.x = fmaxf(point.x, max.x);
+        max.y = fmaxf(point.y, max.y);
+    }
+    
+    CGPoint center =
+    {
+        0.5f * (min.x + max.x),
+        0.5f * (min.y + max.y),
+    };
+    
+    NSNumber *(^angleFromPoint)(id) = ^(NSValue *value)
+    {
+        CGPoint point = [value CGPointValue];
+        CGFloat theta = atan2f(point.y - center.y, point.x - center.x);
+        CGFloat angle = fmodf(M_PI - M_PI_4 + theta, 2 * M_PI);
+        return @(angle);
+    };
+    
+    NSArray *sortedPoints = [points sortedArrayUsingComparator:^NSComparisonResult(id a, id b)
+                             {
+                                 return [angleFromPoint(a) compare:angleFromPoint(b)];
+                             }];
+    
+    IPDFRectangleFeature *rectangleFeatureMutable = [IPDFRectangleFeature new];
+    rectangleFeatureMutable.topLeft = [sortedPoints[3] CGPointValue];
+    rectangleFeatureMutable.topRight = [sortedPoints[2] CGPointValue];
+    rectangleFeatureMutable.bottomRight = [sortedPoints[1] CGPointValue];
+    rectangleFeatureMutable.bottomLeft = [sortedPoints[0] CGPointValue];
+    
+    return (id)rectangleFeatureMutable;
 }
 
 @end

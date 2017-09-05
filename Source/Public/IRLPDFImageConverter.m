@@ -23,8 +23,8 @@
         return nil;
     }
     
-    double pageWidth = image.size.width * image.scale * 72 / horzRes;
-    double pageHeight = image.size.height * image.scale * 72 / vertRes;
+    double pageWidth = image.size.width * image.scale * 72 * 0.25 / horzRes;
+    double pageHeight = image.size.height * image.scale * 72 * 0.25 / vertRes;
     
     NSMutableData *pdfFile = [[NSMutableData alloc] init];
     CGDataConsumerRef pdfConsumer = CGDataConsumerCreateWithCFData((CFMutableDataRef)pdfFile);

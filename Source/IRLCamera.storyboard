@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="11542" systemVersion="16B2555" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="vXZ-lx-hvc">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="12121" systemVersion="16G29" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="vXZ-lx-hvc">
     <device id="retina4_7" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11524"/>
-        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="Constraints with non-1.0 multipliers" minToolsVersion="5.1"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -21,18 +22,28 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" alpha="0.5" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Title" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="RfT-Bc-t45">
+                                <rect key="frame" x="0.0" y="20" width="375" height="50"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="nP5-Sn-wTS"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" name="DINAlternate-Bold" family="DIN Alternate" pointSize="20"/>
+                                <color key="textColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="GCS-Ur-8wm" customClass="IRLCameraView">
-                                <rect key="frame" x="0.0" y="20" width="375" height="647"/>
+                                <rect key="frame" x="0.0" y="70" width="375" height="597"/>
                                 <subviews>
-                                    <imageView hidden="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="ngc-U5-0Sq">
-                                        <rect key="frame" x="0.0" y="50" width="75" height="75"/>
+                                    <imageView hidden="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="focusIndicator" translatesAutoresizingMaskIntoConstraints="NO" id="ngc-U5-0Sq">
+                                        <rect key="frame" x="0.0" y="0.0" width="75" height="75"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="75" id="UcJ-Md-mUn"/>
                                             <constraint firstAttribute="width" constant="75" id="g78-ef-0lg"/>
                                         </constraints>
                                     </imageView>
                                     <visualEffectView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="dy7-PH-354" userLabel="AjustBar_Visual Effect View">
-                                        <rect key="frame" x="0.0" y="603" width="375" height="44"/>
+                                        <rect key="frame" x="0.0" y="553" width="375" height="44"/>
                                         <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" id="6gK-Rm-bGh">
                                             <rect key="frame" x="0.0" y="0.0" width="375" height="44"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -75,10 +86,10 @@
                                                     </connections>
                                                 </button>
                                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kz1-sH-Bm7">
-                                                    <rect key="frame" x="54" y="11" width="79" height="22"/>
+                                                    <rect key="frame" x="50" y="11" width="88" height="22"/>
                                                     <inset key="contentEdgeInsets" minX="10" minY="0.0" maxX="10" maxY="0.0"/>
-                                                    <state key="normal" title="Manual">
-                                                        <color key="titleColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <state key="normal" title="Crop On">
+                                                        <color key="titleColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                                         <color key="titleShadowColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
                                                     </state>
                                                     <state key="selected" image="856-lightning-bolt-selected"/>
@@ -87,10 +98,10 @@
                                                     </connections>
                                                 </button>
                                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="oet-oY-1hi">
-                                                    <rect key="frame" x="259" y="11" width="58" height="22"/>
+                                                    <rect key="frame" x="236.5" y="11" width="90" height="22"/>
                                                     <inset key="contentEdgeInsets" minX="10" minY="0.0" maxX="10" maxY="0.0"/>
-                                                    <state key="normal" title="Auto">
-                                                        <color key="titleColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <state key="normal" title="Crop Off">
+                                                        <color key="titleColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                                         <color key="titleShadowColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
                                                     </state>
                                                     <state key="selected" image="856-lightning-bolt-selected"/>
@@ -105,10 +116,10 @@
                                                 <constraint firstItem="nP2-11-S2c" firstAttribute="centerY" secondItem="6gK-Rm-bGh" secondAttribute="centerY" id="DHi-Ap-ZWR"/>
                                                 <constraint firstAttribute="trailing" secondItem="4cw-eb-M1Z" secondAttribute="trailing" constant="10" id="FnG-yw-dfh"/>
                                                 <constraint firstItem="wrX-wv-PHp" firstAttribute="centerY" secondItem="6gK-Rm-bGh" secondAttribute="centerY" id="Hyb-r5-9aX"/>
+                                                <constraint firstItem="kz1-sH-Bm7" firstAttribute="centerX" secondItem="6gK-Rm-bGh" secondAttribute="centerX" multiplier="1:2" id="NJ5-wf-fN3"/>
+                                                <constraint firstItem="oet-oY-1hi" firstAttribute="centerX" secondItem="6gK-Rm-bGh" secondAttribute="centerX" multiplier="1.5:1" id="Xlr-gq-bt0"/>
                                                 <constraint firstItem="wrX-wv-PHp" firstAttribute="leading" secondItem="6gK-Rm-bGh" secondAttribute="leading" constant="10" id="jyR-n0-KDh"/>
                                                 <constraint firstItem="kz1-sH-Bm7" firstAttribute="centerY" secondItem="wrX-wv-PHp" secondAttribute="centerY" id="lcp-m3-TQt"/>
-                                                <constraint firstItem="4cw-eb-M1Z" firstAttribute="leading" secondItem="oet-oY-1hi" secondAttribute="trailing" id="nah-M3-kEe"/>
-                                                <constraint firstItem="kz1-sH-Bm7" firstAttribute="leading" secondItem="wrX-wv-PHp" secondAttribute="trailing" constant="10" id="ro5-Ny-2hh"/>
                                                 <constraint firstItem="4cw-eb-M1Z" firstAttribute="centerY" secondItem="6gK-Rm-bGh" secondAttribute="centerY" id="yRQ-g2-y95"/>
                                             </constraints>
                                         </view>
@@ -117,22 +128,17 @@
                                         </constraints>
                                         <blurEffect style="light"/>
                                     </visualEffectView>
-                                    <button opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" adjustsImageWhenDisabled="NO" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Cu7-Av-1OC">
-                                        <rect key="frame" x="160" y="537" width="56" height="56"/>
-                                        <color key="backgroundColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <button opaque="NO" alpha="0.69999998807907104" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Cu7-Av-1OC">
+                                        <rect key="frame" x="155" y="477" width="66" height="66"/>
+                                        <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                                         <constraints>
-                                            <constraint firstAttribute="width" secondItem="Cu7-Av-1OC" secondAttribute="height" multiplier="1:1" id="DY7-Up-n9a"/>
-                                            <constraint firstAttribute="width" constant="56" id="eLq-qt-aA8"/>
+                                            <constraint firstAttribute="height" constant="66" id="LMx-SU-4So"/>
+                                            <constraint firstAttribute="width" constant="66" id="eLq-qt-aA8"/>
                                         </constraints>
-                                        <inset key="contentEdgeInsets" minX="10" minY="0.0" maxX="10" maxY="0.0"/>
-                                        <state key="normal" title="Scan">
+                                        <state key="normal" image="captureButton">
                                             <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <color key="titleShadowColor" red="0.50196078431372548" green="0.49803921568627452" blue="0.49803921568627452" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         </state>
-                                        <userDefinedRuntimeAttributes>
-                                            <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
-                                                <integer key="value" value="28"/>
-                                            </userDefinedRuntimeAttribute>
-                                        </userDefinedRuntimeAttributes>
                                         <connections>
                                             <action selector="captureButton:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="C4G-wi-JvL"/>
                                         </connections>
@@ -147,7 +153,7 @@
                                     <constraint firstItem="ngc-U5-0Sq" firstAttribute="leading" secondItem="GCS-Ur-8wm" secondAttribute="leading" id="Z9r-hy-x5J"/>
                                     <constraint firstItem="Cu7-Av-1OC" firstAttribute="centerX" secondItem="GCS-Ur-8wm" secondAttribute="centerX" id="qLI-EO-hS1"/>
                                     <constraint firstAttribute="bottom" secondItem="dy7-PH-354" secondAttribute="bottom" id="uOb-9N-EhY"/>
-                                    <constraint firstItem="ngc-U5-0Sq" firstAttribute="top" secondItem="GCS-Ur-8wm" secondAttribute="top" constant="50" id="wY4-9l-jwI"/>
+                                    <constraint firstItem="ngc-U5-0Sq" firstAttribute="top" secondItem="GCS-Ur-8wm" secondAttribute="top" id="wY4-9l-jwI"/>
                                     <constraint firstItem="dy7-PH-354" firstAttribute="leading" secondItem="GCS-Ur-8wm" secondAttribute="leading" id="yE2-FD-teg"/>
                                 </constraints>
                                 <variation key="default">
@@ -155,17 +161,10 @@
                                         <exclude reference="0hB-en-s3O"/>
                                     </mask>
                                 </variation>
+                                <connections>
+                                    <outletCollection property="gestureRecognizers" destination="BB5-Rb-7tm" appends="YES" id="EkS-Ws-PiG"/>
+                                </connections>
                             </view>
-                            <label opaque="NO" userInteractionEnabled="NO" alpha="0.5" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Title" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="RfT-Bc-t45">
-                                <rect key="frame" x="0.0" y="20" width="375" height="50"/>
-                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="50" id="nP5-Sn-wTS"/>
-                                </constraints>
-                                <fontDescription key="fontDescription" name="DINAlternate-Bold" family="DIN Alternate" pointSize="20"/>
-                                <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="frH-CJ-30O" userLabel="Close">
                                 <rect key="frame" x="10" y="34" width="14" height="22"/>
                                 <state key="normal" image="763-arrow-up_white">
@@ -179,9 +178,9 @@
                         <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <gestureRecognizers/>
                         <constraints>
+                            <constraint firstItem="GCS-Ur-8wm" firstAttribute="top" secondItem="RfT-Bc-t45" secondAttribute="bottom" id="3N5-D5-fh2"/>
                             <constraint firstItem="RfT-Bc-t45" firstAttribute="centerY" secondItem="frH-CJ-30O" secondAttribute="centerY" id="71Y-Xu-YtZ"/>
                             <constraint firstItem="frH-CJ-30O" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="10" id="AX3-wQ-673"/>
-                            <constraint firstItem="GCS-Ur-8wm" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" id="PHA-mb-MMZ"/>
                             <constraint firstAttribute="trailing" secondItem="GCS-Ur-8wm" secondAttribute="trailing" id="QV5-lk-X0M"/>
                             <constraint firstItem="GCS-Ur-8wm" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" id="U2w-WZ-lEB"/>
                             <constraint firstItem="RfT-Bc-t45" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" id="UtT-JM-zkk"/>
@@ -205,6 +204,11 @@
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="x5A-6p-PRh" sceneMemberID="firstResponder"/>
+                <tapGestureRecognizer id="BB5-Rb-7tm">
+                    <connections>
+                        <action selector="focusGesture:" destination="vXZ-lx-hvc" id="R7d-hT-lOH"/>
+                    </connections>
+                </tapGestureRecognizer>
             </objects>
             <point key="canvasLocation" x="788" y="94"/>
         </scene>
@@ -218,5 +222,7 @@
         <image name="856-lightning-bolt" width="14" height="28"/>
         <image name="856-lightning-bolt-selected" width="14" height="28"/>
         <image name="873-magic-wand" width="28" height="28"/>
+        <image name="captureButton" width="66" height="66"/>
+        <image name="focusIndicator" width="75" height="75"/>
     </resources>
 </document>

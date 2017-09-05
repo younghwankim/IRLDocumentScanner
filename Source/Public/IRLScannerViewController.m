@@ -110,10 +110,14 @@
     }
     
     [self.cameraView setEnableBorderDetection:YES];
-    self.scan_button.hidden = YES;
+    self.scan_button.hidden = NO;
     self.auto_button.hidden = YES;
     
-    
+    if([self isAutoFocusMode]){
+        [self goAuto:nil];
+    } else {
+        [self goManual:nil];
+    }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -156,6 +160,37 @@
 }
 
 #pragma mark - CameraVC Actions
+- (IBAction)focusGesture:(UITapGestureRecognizer *)sender {
+    if (sender.state == UIGestureRecognizerStateRecognized)
+    {
+        CGPoint location = [sender locationInView:self.cameraView];
+        
+        [self focusIndicatorAnimateToPoint:location];
+        
+        [self.cameraView focusAtPoint:location completionHandler:^
+         {
+             [self focusIndicatorAnimateToPoint:location];
+         }];
+    }
+}
+
+- (void)focusIndicatorAnimateToPoint:(CGPoint)targetPoint {
+    [self.focusIndicator setCenter:targetPoint];
+    self.focusIndicator.alpha = 0.0;
+    self.focusIndicator.hidden = NO;
+    
+    [UIView animateWithDuration:0.4 animations:^
+     {
+         self.focusIndicator.alpha = 1.0;
+     }
+                     completion:^(BOOL finished)
+     {
+         [UIView animateWithDuration:0.4 animations:^
+          {
+              self.focusIndicator.alpha = 0.0;
+          }];
+     }];
+}
 
 - (IBAction)detctingQualityToggle:(id)sender {
     
@@ -213,13 +248,15 @@
     self.scan_button.hidden = NO;
     self.auto_button.hidden = NO;
     self.manual_button.hidden = YES;
+    [self saveAutoFocusMode:NO];
 }
 
 - (IBAction)goAuto:(id)sender {
     [self.cameraView setEnableBorderDetection:YES];
-    self.scan_button.hidden = YES;
+    self.scan_button.hidden = NO;
     self.auto_button.hidden = YES;
     self.manual_button.hidden = NO;
+    [self saveAutoFocusMode:YES];
 }
 
 #pragma mark - UI animations
@@ -306,22 +343,22 @@
         white.alpha = 1.0f;
     }];
     
-    if ([sender isKindOfClass:[UIButton class]]) {
-        
-        [self.cameraView captureImageWithCompletionHander:^(id data)
-         {
-             UIImage *image = ([data isKindOfClass:[NSData class]]) ? [UIImage imageWithData:data] : data;
-             
-             TOCropViewController *cropViewController = [[TOCropViewController alloc] initWithImage:image];
-             cropViewController.delegate = self;
-             cropViewController.aspectRatioPickerButtonHidden = YES;
-             cropViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
-             [self presentViewController:cropViewController animated:YES completion:nil];
-             
-         }];
-
-    } else {
-        
+//    if ([sender isKindOfClass:[UIButton class]]) {
+//    
+//        [self.cameraView captureImageWithCompletionHander:^(id data)
+//         {
+//             UIImage *image = ([data isKindOfClass:[NSData class]]) ? [UIImage imageWithData:data] : data;
+//             
+//             TOCropViewController *cropViewController = [[TOCropViewController alloc] initWithImage:image];
+//             cropViewController.delegate = self;
+//             cropViewController.aspectRatioPickerButtonHidden = YES;
+//             cropViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+//             [self presentViewController:cropViewController animated:YES completion:nil];
+//             
+//         }];
+//
+//    } else {
+    
         [self.view addSubview:imgView];
 
         [UIView animateWithDuration:0.8f delay:0.5f usingSpringWithDamping:0.3f initialSpringVelocity:0.7f options:UIViewAnimationOptionCurveEaseInOut animations:^{
@@ -341,7 +378,7 @@
             }
         }];
 
-    }
+//    }
     
 }
 
@@ -420,5 +457,26 @@
     [self captureButton:view];
 }
 
+
+- (BOOL) isAutoFocusMode {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *focusMode = [defaults stringForKey:@"FocusMode"];
+    
+    if(focusMode && [focusMode isKindOfClass:[NSString class]] && [focusMode isEqualToString:@"Manual"]) {
+        return NO;
+    } else {
+        return YES;
+    }
+}
+
+- (void) saveAutoFocusMode:(BOOL)isAutoFocus {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if(isAutoFocus) {
+        [defaults setObject:@"Auto" forKey:@"FocusMode"];
+    }else{
+        [defaults setObject:@"Manual" forKey:@"FocusMode"];
+    }
+    [defaults synchronize];
+}
 
 @end
